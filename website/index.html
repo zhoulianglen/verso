@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VFM712RH3M"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-VFM712RH3M');
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verso — The Markdown Editor Your .md Files Deserve</title>
+  <meta name="description" content="Verso is a beautiful, fast Markdown editor. Double-click any .md file to read and edit it instantly. Built with Rust, native on macOS, Windows, and Linux.">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --black: #0a0a0a;
+      --white: #fafafa;
+      --gray-100: #f5f5f5;
+      --gray-200: #e5e5e5;
+      --gray-400: #a3a3a3;
+      --gray-500: #737373;
+      --gray-600: #525252;
+      --gray-800: #262626;
+      --gray-900: #171717;
+      --red: #e25555;
+      --display: 'Outfit', -apple-system, 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'Noto Sans SC', sans-serif;
+      --sans: -apple-system, 'SF Pro Text', 'Helvetica Neue', 'PingFang SC', 'Noto Sans SC', sans-serif;
+      --mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--white);
+      color: var(--black);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    ::selection {
+      background: var(--red);
+      color: var(--white);
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    @keyframes inkDrop {
+      0% { transform: translateY(-30px) scale(0.8); opacity: 0; }
+      60% { transform: translateY(4px) scale(1.02); opacity: 1; }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .fade-up {
+      opacity: 0;
+      animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .fade-in {
+      opacity: 0;
+      animation: fadeIn 0.6s ease forwards;
+    }
+
+    /* Stagger delays */
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .delay-4 { animation-delay: 0.4s; }
+    .delay-5 { animation-delay: 0.5s; }
+    .delay-6 { animation-delay: 0.6s; }
+    .delay-7 { animation-delay: 0.7s; }
+    .delay-8 { animation-delay: 0.8s; }
+
+    /* Scroll-triggered reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Navigation ── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 0 48px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(20px) saturate(1.2);
+      -webkit-backdrop-filter: blur(20px) saturate(1.2);
+      background: rgba(250, 250, 250, 0.85);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      transition: background 0.3s;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--display);
+      font-size: 20px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-logo svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-size: 14px;
+      color: var(--gray-600);
+      transition: color 0.2s;
+      letter-spacing: 0.01em;
+    }
+
+    .nav-links a:hover {
+      color: var(--black);
+    }
+
+    .nav-github {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-github svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .nav-lang {
+      font-size: 13px;
+      padding: 4px 10px;
+      border: 1px solid var(--gray-200);
+      border-radius: 6px;
+      color: var(--gray-500);
+      transition: all 0.2s;
+    }
+
+    .nav-lang:hover {
+      color: var(--black);
+      border-color: var(--gray-400);
+    }
+
+    /* ── Hero ── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      position: relative;
+    }
+
+    .hero-icon {
+      width: 88px;
+      height: 88px;
+      margin-bottom: 40px;
+      animation: inkDrop 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.08));
+    }
+
+    .hero h1 {
+      font-family: var(--display);
+      font-size: clamp(52px, 8vw, 96px);
+      font-weight: 300;
+      letter-spacing: -0.035em;
+      line-height: 1.05;
+      margin-bottom: 8px;
+    }
+
+    .hero h1 .cursor {
+      display: inline-block;
+      width: 3px;
+      height: 0.85em;
+      background: var(--red);
+      margin-left: 4px;
+      vertical-align: baseline;
+      position: relative;
+      top: 0.08em;
+      animation: blink 1s step-end infinite;
+      border-radius: 1px;
+    }
+
+    .hero-cn {
+      font-family: var(--display);
+      font-size: clamp(16px, 2.5vw, 22px);
+      font-weight: 300;
+      color: var(--gray-500);
+      letter-spacing: 0.15em;
+      margin-bottom: 32px;
+    }
+
+    .hero-tagline {
+      font-size: clamp(17px, 2vw, 21px);
+      color: var(--gray-600);
+      max-width: 520px;
+      line-height: 1.65;
+      margin-bottom: 48px;
+      font-weight: 400;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 32px;
+      background: var(--black);
+      color: var(--white);
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      transition: transform 0.2s, box-shadow 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-primary svg { width: 18px; height: 18px; }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      background: transparent;
+      color: var(--gray-600);
+      border: 1px solid var(--gray-200);
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover {
+      color: var(--black);
+      border-color: var(--gray-400);
+      background: var(--gray-100);
+    }
+
+    .btn-secondary svg { width: 18px; height: 18px; }
+
+    .hero-version {
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--gray-400);
+      font-family: var(--mono);
+    }
+
+    .hero-platforms {
+      margin-top: 48px;
+      display: flex;
+      gap: 28px;
+      align-items: center;
+      color: var(--gray-400);
+      font-size: 13px;
+      letter-spacing: 0.03em;
+    }
+
+    .hero-platforms span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hero-platforms svg { width: 16px; height: 16px; opacity: 0.6; }
+
+    /* ── Screenshot ── */
+    .screenshot-section {
+      padding: 0 24px 120px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .screenshot-wrapper {
+      max-width: 1100px;
+      width: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.06),
+        0 24px 80px rgba(0, 0, 0, 0.08),
+        0 8px 24px rgba(0, 0, 0, 0.04);
+      background: var(--gray-100);
+      position: relative;
+    }
+
+    .screenshot-wrapper img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* ── Features ── */
+    .features {
+      padding: 100px 48px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: var(--display);
+      font-size: clamp(32px, 4vw, 48px);
+      font-weight: 300;
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+
+    .section-subtitle {
+      font-size: 17px;
+      color: var(--gray-500);
+      max-width: 480px;
+      line-height: 1.65;
+      margin-bottom: 72px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px 40px;
+    }
+
+    .feature {
+      padding: 0;
+    }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--gray-100);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      transition: background 0.3s, transform 0.3s;
+    }
+
+    .feature:hover .feature-icon {
+      background: var(--black);
+      transform: scale(1.05);
+    }
+
+    .feature:hover .feature-icon svg {
+      stroke: var(--white);
+    }
+
+    .feature-icon svg {
+      width: 20px;
+      height: 20px;
+      stroke: var(--gray-600);
+      stroke-width: 1.5;
+      fill: none;
+      transition: stroke 0.3s;
+    }
+
+    .feature h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+
+    .feature p {
+      font-size: 14px;
+      color: var(--gray-500);
+      line-height: 1.65;
+    }
+
+    /* ── Philosophy ── */
+    .philosophy {
+      padding: 100px 48px;
+      background: var(--black);
+      color: var(--white);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .philosophy::before {
+      content: '';
+      position: absolute;
+      top: -200px;
+      right: -200px;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(226, 85, 85, 0.06), transparent 70%);
+      pointer-events: none;
+    }
+
+    .philosophy-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+
+    .philosophy .section-label {
+      color: var(--gray-500);
+    }
+
+    .philosophy .section-title {
+      color: var(--white);
+      margin-bottom: 24px;
+    }
+
+    .philosophy-text {
+      font-size: 16px;
+      color: var(--gray-400);
+      line-height: 1.75;
+    }
+
+    .philosophy-text p + p {
+      margin-top: 16px;
+    }
+
+    .philosophy-visual {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      font-family: var(--mono);
+      font-size: 14px;
+      color: var(--gray-500);
+    }
+
+    .phil-line {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.02);
+      transition: border-color 0.3s, background 0.3s;
+    }
+
+    .phil-line:hover {
+      border-color: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .phil-line .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--red);
+      flex-shrink: 0;
+      opacity: 0.8;
+    }
+
+    .phil-line span {
+      color: var(--gray-400);
+      font-size: 14px;
+    }
+
+    /* ── Download ── */
+    .download {
+      padding: 120px 48px;
+      text-align: center;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .download .section-title {
+      margin-bottom: 12px;
+    }
+
+    .download-subtitle {
+      font-size: 17px;
+      color: var(--gray-500);
+      line-height: 1.65;
+      margin-bottom: 48px;
+    }
+
+    .download-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .download-card {
+      padding: 28px 20px;
+      border: 1px solid var(--gray-200);
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.25s;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .download-card:hover {
+      border-color: var(--black);
+      background: var(--gray-100);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
+    }
+
+    .download-card svg {
+      width: 32px;
+      height: 32px;
+      opacity: 0.7;
+    }
+
+    .download-card .platform-name {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .download-card .platform-arch {
+      font-size: 12px;
+      color: var(--gray-400);
+      font-family: var(--mono);
+    }
+
+    .download-note {
+      font-size: 13px;
+      color: var(--gray-400);
+    }
+
+    .download-note a {
+      color: var(--gray-600);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .download-note a:hover {
+      color: var(--black);
+    }
+
+    /* ── Footer ── */
+    footer {
+      padding: 48px;
+      border-top: 1px solid rgba(0, 0, 0, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--gray-400);
+    }
+
+    .footer-left svg { width: 18px; height: 18px; opacity: 0.5; }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      font-size: 13px;
+      color: var(--gray-400);
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--black); }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      nav { padding: 0 24px; }
+      .features { padding: 80px 24px; }
+      .features-grid { grid-template-columns: repeat(2, 1fr); gap: 40px 32px; }
+      .philosophy { padding: 80px 24px; }
+      .philosophy-inner { grid-template-columns: 1fr; gap: 48px; }
+      .download { padding: 80px 24px; }
+      .download-grid { grid-template-columns: repeat(3, 1fr); }
+      footer { padding: 32px 24px; }
+    }
+
+    @media (max-width: 600px) {
+      .nav-links { display: none; }
+      .hero { padding: 100px 20px 60px; }
+      .hero-icon { width: 64px; height: 64px; margin-bottom: 28px; }
+      .hero-actions { flex-direction: column; width: 100%; }
+      .btn-primary, .btn-secondary { width: 100%; justify-content: center; }
+      .hero-platforms { flex-direction: column; gap: 12px; }
+      .features-grid { grid-template-columns: 1fr; gap: 32px; }
+      .download-grid { grid-template-columns: 1fr; }
+      footer { flex-direction: column; gap: 16px; text-align: center; }
+      .footer-links { flex-wrap: wrap; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Navigation ── -->
+  <nav class="fade-in delay-1">
+    <a href="#" class="nav-logo">
+      <svg viewBox="0 0 1024 1024" fill="none">
+        <rect x="100" y="100" width="824" height="824" rx="185" fill="#f5f5f5"/>
+        <path d="M512 290C500 315 475 355 455 395C420 460 385 510 385 565C385 640 440 710 512 710C584 710 639 640 639 565C639 510 604 460 569 395C549 355 524 315 512 290Z" fill="#171717"/>
+      </svg>
+      Verso
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#philosophy">Philosophy</a></li>
+      <li><a href="#download">Download</a></li>
+      <li>
+        <a href="https://github.com/zhoulianglen/verso" class="nav-github" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub
+        </a>
+      </li>
+      <li><a href="./zh/" class="nav-lang">中文</a></li>
+    </ul>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <section class="hero">
+    <svg class="hero-icon" viewBox="0 0 1024 1024" fill="none">
+      <defs>
+        <radialGradient id="hbg" cx="0.5" cy="0.48" r="0.6">
+          <stop offset="0%" stop-color="#FAFAFA"/>
+          <stop offset="100%" stop-color="#EEEEEE"/>
+        </radialGradient>
+        <radialGradient id="hdrop" cx="0.43" cy="0.4" r="0.52">
+          <stop offset="0%" stop-color="#3a3430"/>
+          <stop offset="50%" stop-color="#1c1816"/>
+          <stop offset="100%" stop-color="#0c0a08"/>
+        </radialGradient>
+        <radialGradient id="hhl" cx="0.38" cy="0.33" r="0.18">
+          <stop offset="0%" stop-color="#fff" stop-opacity="0.28"/>
+          <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+        </radialGradient>
+        <clipPath id="hclip"><rect x="100" y="100" width="824" height="824" rx="185"/></clipPath>
+      </defs>
+      <g clip-path="url(#hclip)">
+        <rect x="100" y="100" width="824" height="824" fill="url(#hbg)"/>
+        <ellipse cx="512" cy="735" rx="95" ry="12" fill="#000" opacity="0.06"/>
+        <path d="M512 290C500 315 475 355 455 395C420 460 385 510 385 565C385 640 440 710 512 710C584 710 639 640 639 565C639 510 604 460 569 395C549 355 524 315 512 290Z" fill="url(#hdrop)"/>
+        <ellipse cx="462" cy="500" rx="32" ry="52" fill="url(#hhl)" transform="rotate(-12 462 500)"/>
+      </g>
+    </svg>
+
+    <h1 class="fade-up delay-2">Verso<span class="cursor"></span></h1>
+    <p class="hero-cn fade-up delay-3">轻 墨</p>
+    <p class="hero-tagline fade-up delay-4">
+      Double-click a .md file. It opens beautifully.<br>
+      Read it, edit it, close it. That's it.
+    </p>
+
+    <div class="hero-actions fade-up delay-5">
+      <a href="#download" class="btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download
+      </a>
+      <a href="https://github.com/zhoulianglen/verso" class="btn-secondary" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        Source Code
+      </a>
+    </div>
+
+    <p class="hero-version fade-up delay-6">v0.1.0</p>
+
+    <div class="hero-platforms fade-up delay-7">
+      <span>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83"/><path d="M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11"/></svg>
+        macOS
+      </span>
+      <span>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+        Windows
+      </span>
+      <span>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.504 0c-.155 0-.311.015-.466.045C8.678.455 6.846 3.507 6.846 3.507s-2.373 3.185.423 6.74c-1.051 1.18-1.588 2.119-1.588 2.119s-1.152.63-.256 2.781c.896 2.152 2.381 3.165 2.978 3.404.597.238 1.494.596 2.39-.119.896-.714 3.882-2.869 4.181-3.106.3-.238.897-.893 1.195-2.382.298-1.49-.3-2.561-.897-3.216-.598-.655-2.092-.953-2.092-.953s-1.194-.297-1.493.12c-.3.417.299.715.897.834.598.12 1.195.656 1.493 1.312.3.655.3 1.788-.299 2.383-.597.596-3.584 2.68-4.181 3.036-.597.357-.897.298-1.195 0-.299-.298-1.494-1.489-1.793-2.502-.299-1.013.598-1.311.598-1.311s1.493-1.615 3.286-3.701c-1.493-2.085-.598-4.887-.598-4.887s1.493-2.741 5.077-3.16c0 0-.299-.178-.896-.178zM15.68 3.507c1.594 0 2.888 1.312 2.888 2.928 0 1.616-1.294 2.928-2.888 2.928-1.594 0-2.888-1.312-2.888-2.928 0-1.616 1.294-2.928 2.888-2.928z"/></svg>
+        Linux
+      </span>
+    </div>
+  </section>
+
+  <!-- ── Screenshot ── -->
+  <section class="screenshot-section reveal">
+    <div class="screenshot-wrapper">
+      <img src="screenshot.png" alt="Verso — minimalist markdown editor" />
+    </div>
+  </section>
+
+  <!-- ── Features ── -->
+  <section class="features" id="features">
+    <div class="reveal">
+      <p class="section-label">Features</p>
+      <h2 class="section-title">Open any .md file.<br>Start reading and writing.</h2>
+      <p class="section-subtitle">Not a note manager. Not a knowledge base. Just the best way to open, read, and edit Markdown files on your machine.</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </div>
+        <h3>WYSIWYG & Source Mode</h3>
+        <p>Write in a rich visual editor or switch to raw Markdown source with syntax highlighting. Toggle freely between modes.</p>
+      </div>
+
+      <div class="feature reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        </div>
+        <h3>Full-Text Search</h3>
+        <p>Instantly find any note with Tantivy-powered full-text search. Your entire library, always one keystroke away.</p>
+      </div>
+
+      <div class="feature reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+        </div>
+        <h3>Plain Markdown Files</h3>
+        <p>Notes are standard .md files in a folder you choose. No proprietary formats, no lock-in. Your files, your way.</p>
+      </div>
+
+      <div class="feature reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+        </div>
+        <h3>Tables & Rich Content</h3>
+        <p>Insert tables, task lists, code blocks with syntax highlighting, images, and more through slash commands or the format bar.</p>
+      </div>
+
+      <div class="feature reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        </div>
+        <h3>CJK-Latin Spacing</h3>
+        <p>Automatic spacing between Chinese, Japanese, Korean, and Latin characters. Perfect typography for multilingual writing.</p>
+      </div>
+
+      <div class="feature reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </div>
+        <h3>Keyboard-First</h3>
+        <p>Command palette, slash commands, and comprehensive shortcuts. Navigate, format, and manage notes without leaving the keyboard.</p>
+      </div>
+
+      <div class="feature reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+        </div>
+        <h3>Export Anywhere</h3>
+        <p>Copy as Markdown, plain text, or HTML. Print to PDF. Export your writing in any format you need.</p>
+      </div>
+
+      <div class="feature reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        </div>
+        <h3>Live File Watching</h3>
+        <p>Edit notes externally and Verso picks up changes instantly. Works seamlessly alongside Git, Obsidian, or any other tool.</p>
+      </div>
+
+      <div class="feature reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        </div>
+        <h3>Light & Dark Themes</h3>
+        <p>Beautiful in any light. Automatically follows your system preference, or choose your own. Customizable typography settings.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Philosophy ── -->
+  <section class="philosophy" id="philosophy">
+    <div class="philosophy-inner">
+      <div>
+        <div class="reveal">
+          <p class="section-label">Philosophy</p>
+          <h2 class="section-title">Like Preview.app,<br>but for Markdown</h2>
+        </div>
+        <div class="philosophy-text reveal">
+          <p>Your disk is full of .md files — project docs, meeting notes, journals, READMEs. You shouldn't need a database or an app ecosystem just to read them.</p>
+          <p>Verso is a Markdown editor the way Preview is a PDF viewer: double-click a file, it opens, you read or edit, you close. No library to manage, no import, no sync.</p>
+          <p>Built with Rust and Tauri. Launches in under a second. Uses less memory than a browser tab.</p>
+        </div>
+      </div>
+      <div class="reveal">
+        <div class="philosophy-visual">
+          <div class="phil-line"><span class="dot"></span><span>Double-click .md → opens instantly in WYSIWYG</span></div>
+          <div class="phil-line"><span class="dot"></span><span>Or open a folder — browse and edit all files inside</span></div>
+          <div class="phil-line"><span class="dot"></span><span>Rust + Tauri — native speed, not Electron</span></div>
+          <div class="phil-line"><span class="dot"></span><span>No account, no cloud, no tracking, no internet needed</span></div>
+          <div class="phil-line"><span class="dot"></span><span>Open source, MIT licensed, free forever</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Download ── -->
+  <section class="download" id="download">
+    <div class="reveal">
+      <p class="section-label">Download</p>
+      <h2 class="section-title">Set it as your default .md editor</h2>
+      <p class="download-subtitle">Free, open source. Download, install, right-click any .md file → Open With → Verso.</p>
+    </div>
+
+    <div class="download-grid reveal">
+      <a href="https://github.com/zhoulianglen/verso/releases/latest" class="download-card" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83"/><path d="M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11"/></svg>
+        <span class="platform-name">macOS</span>
+        <span class="platform-arch">Universal (Apple Silicon + Intel)</span>
+      </a>
+
+      <a href="https://github.com/zhoulianglen/verso/releases/latest" class="download-card" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+        <span class="platform-name">Windows</span>
+        <span class="platform-arch">x64 installer</span>
+      </a>
+
+      <a href="https://github.com/zhoulianglen/verso/releases/latest" class="download-card" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.504 0c-.155 0-.311.015-.466.045C8.678.455 6.846 3.507 6.846 3.507s-2.373 3.185.423 6.74c-1.051 1.18-1.588 2.119-1.588 2.119s-1.152.63-.256 2.781c.896 2.152 2.381 3.165 2.978 3.404.597.238 1.494.596 2.39-.119.896-.714 3.882-2.869 4.181-3.106.3-.238.897-.893 1.195-2.382.298-1.49-.3-2.561-.897-3.216-.598-.655-2.092-.953-2.092-.953s-1.194-.297-1.493.12c-.3.417.299.715.897.834.598.12 1.195.656 1.493 1.312.3.655.3 1.788-.299 2.383-.597.596-3.584 2.68-4.181 3.036-.597.357-.897.298-1.195 0-.299-.298-1.494-1.489-1.793-2.502-.299-1.013.598-1.311.598-1.311s1.493-1.615 3.286-3.701c-1.493-2.085-.598-4.887-.598-4.887s1.493-2.741 5.077-3.16c0 0-.299-.178-.896-.178zM15.68 3.507c1.594 0 2.888 1.312 2.888 2.928 0 1.616-1.294 2.928-2.888 2.928-1.594 0-2.888-1.312-2.888-2.928 0-1.616 1.294-2.928 2.888-2.928z"/></svg>
+        <span class="platform-name">Linux</span>
+        <span class="platform-arch">AppImage & .deb</span>
+      </a>
+    </div>
+
+    <p class="download-note reveal">
+      All releases available on <a href="https://github.com/zhoulianglen/verso/releases" target="_blank" rel="noopener">GitHub Releases</a>
+    </p>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <div class="footer-left">
+      <svg viewBox="0 0 1024 1024" fill="none">
+        <rect x="100" y="100" width="824" height="824" rx="185" fill="#e5e5e5"/>
+        <path d="M512 290C500 315 475 355 455 395C420 460 385 510 385 565C385 640 440 710 512 710C584 710 639 640 639 565C639 510 604 460 569 395C549 355 524 315 512 290Z" fill="#a3a3a3"/>
+      </svg>
+      Verso &middot; 轻墨
+    </div>
+    <ul class="footer-links">
+      <li><a href="https://github.com/zhoulianglen/verso" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="https://github.com/zhoulianglen/verso/releases" target="_blank" rel="noopener">Releases</a></li>
+      <li><a href="https://github.com/zhoulianglen/verso/issues" target="_blank" rel="noopener">Issues</a></li>
+      <li><a href="https://github.com/zhoulianglen/verso/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a></li>
+    </ul>
+  </footer>
+
+  <!-- ── Auto Language Redirect ── -->
+  <script>
+    (function() {
+      if (sessionStorage.getItem('lang-chosen')) return;
+      var lang = navigator.language || navigator.userLanguage || '';
+      if (/^zh\b/i.test(lang)) {
+        sessionStorage.setItem('lang-chosen', '1');
+        window.location.replace('./zh/');
+      }
+    })();
+  </script>
+
+  <!-- ── Scroll Reveal Script ── -->
+  <script>
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+    reveals.forEach((el) => observer.observe(el));
+  </script>
+
+</body>
+</html>
