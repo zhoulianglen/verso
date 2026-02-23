@@ -1,0 +1,374 @@
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  type ReactNode,
+} from "react";
+import { getSettings, updateSettings } from "../services/notes";
+import type {
+  ThemeSettings,
+  EditorFontSettings,
+  FontFamily,
+  TextDirection,
+  EditorWidth,
+  LocaleSetting,
+} from "../types/note";
+
+type ThemeMode = "light" | "dark" | "system";
+
+// Font family CSS values
+const fontFamilyMap: Record<FontFamily, string> = {
+  "system-sans":
+    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  serif: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
+  monospace:
+    "ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Monaco, 'Courier New', monospace",
+};
+
+// Editor width CSS values
+const editorWidthMap: Record<EditorWidth, string> = {
+  narrow: "36rem",
+  normal: "48rem",
+  wide: "64rem",
+  full: "100%",
+};
+
+// Default editor font settings (simplified)
+const defaultEditorFontSettings: Required<EditorFontSettings> = {
+  baseFontFamily: "system-sans",
+  baseFontSize: 17,
+  boldWeight: 600,
+  lineHeight: 1.75,
+};
+
+interface ThemeContextType {
+  theme: ThemeMode;
+  resolvedTheme: "light" | "dark";
+  setTheme: (theme: ThemeMode) => void;
+  cycleTheme: () => void;
+  editorFontSettings: Required<EditorFontSettings>;
+  setEditorFontSetting: <K extends keyof EditorFontSettings>(
+    key: K,
+    value: EditorFontSettings[K]
+  ) => void;
+  resetEditorFontSettings: () => void;
+  zoomFontSize: (delta: number) => void;
+  reloadSettings: () => Promise<void>;
+  textDirection: TextDirection;
+  setTextDirection: (dir: TextDirection) => void;
+  editorWidth: EditorWidth;
+  setEditorWidth: (width: EditorWidth) => void;
+  language: LocaleSetting;
+  setLanguage: (lang: LocaleSetting) => void;
+}
+
+const ThemeContext = createContext<ThemeContextType | null>(null);
+
+export function useTheme() {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error("useTheme must be used within ThemeProvider");
+  }
+  return context;
+}
+
+interface ThemeProviderProps {
+  folder: string;
+  children: ReactNode;
+}
+
+// Apply editor font CSS variables (with computed values)
+function applyFontCSSVariables(fonts: Required<EditorFontSettings>) {
+  const root = document.documentElement;
+  const fontFamily = fontFamilyMap[fonts.baseFontFamily];
+  const baseSize = fonts.baseFontSize;
+  const boldWeight = fonts.boldWeight;
+  const lineHeight = fonts.lineHeight;
+
+  // Base font settings
+  root.style.setProperty("--editor-font-family", fontFamily);
+  root.style.setProperty("--editor-base-font-size", `${baseSize}px`);
+  root.style.setProperty("--editor-bold-weight", String(boldWeight));
+  root.style.setProperty("--editor-line-height", String(lineHeight));
+
+  // Computed header sizes (based on base) — Bear-inspired scale
+  root.style.setProperty("--editor-h1-size", `${baseSize * 1.75}px`);
+  root.style.setProperty("--editor-h2-size", `${baseSize * 1.45}px`);
+  root.style.setProperty("--editor-h3-size", `${baseSize * 1.25}px`);
+  root.style.setProperty("--editor-h4-size", `${baseSize * 1.1}px`);
+  root.style.setProperty("--editor-h5-size", `${baseSize}px`);
+  root.style.setProperty("--editor-h6-size", `${baseSize}px`);
+
+  // Paragraph spacing
+  root.style.setProperty("--editor-paragraph-spacing", "1.1em");
+}
+
+// Apply editor layout CSS variables
+function applyLayoutCSSVariables(direction: TextDirection, width: EditorWidth) {
+  const root = document.documentElement;
+  root.style.setProperty("--editor-direction", direction);
+  root.style.setProperty("--editor-max-width", editorWidthMap[width]);
+}
+
+export function ThemeProvider({ folder, children }: ThemeProviderProps) {
+  const [theme, setThemeState] = useState<ThemeMode>("system");
+  const [editorFontSettings, setEditorFontSettings] = useState<
+    Required<EditorFontSettings>
+  >(defaultEditorFontSettings);
+  const [textDirection, setTextDirectionState] = useState<TextDirection>("ltr");
+  const [editorWidth, setEditorWidthState] = useState<EditorWidth>("normal");
+  const [language, setLanguageState] = useState<LocaleSetting>("auto");
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  const [systemTheme, setSystemTheme] = useState<"light" | "dark">(() => {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  });
+
+  // Function to load settings from backend
+  const loadSettingsFromBackend = useCallback(async () => {
+    try {
+      const settings = await getSettings(folder);
+      if (settings.theme) {
+        const mode = settings.theme.mode as ThemeMode;
+        if (mode === "light" || mode === "dark" || mode === "system") {
+          setThemeState(mode);
+        }
+      }
+      if (settings.editorFont) {
+        // Filter out null/undefined values to preserve defaults
+        const fontSettings = Object.fromEntries(
+          Object.entries(settings.editorFont).filter(([, v]) => v != null)
+        ) as Partial<EditorFontSettings>;
+        setEditorFontSettings({
+          ...defaultEditorFontSettings,
+          ...fontSettings,
+        });
+      }
+      if (settings.textDirection === "ltr" || settings.textDirection === "rtl") {
+        setTextDirectionState(settings.textDirection);
+      }
+      if (
+        settings.editorWidth === "narrow" ||
+        settings.editorWidth === "normal" ||
+        settings.editorWidth === "wide" ||
+        settings.editorWidth === "full"
+      ) {
+        setEditorWidthState(settings.editorWidth);
+      }
+      if (
+        settings.language === "auto" ||
+        settings.language === "en" ||
+        settings.language === "zh-CN"
+      ) {
+        setLanguageState(settings.language);
+      }
+    } catch {
+      // If settings can't be loaded, use defaults
+    }
+  }, [folder]);
+
+  // Reload settings from backend (exposed to context consumers)
+  const reloadSettings = useCallback(async () => {
+    await loadSettingsFromBackend();
+  }, [loadSettingsFromBackend]);
+
+  // Load settings from backend on mount
+  useEffect(() => {
+    loadSettingsFromBackend().finally(() => {
+      setIsInitialized(true);
+    });
+  }, [loadSettingsFromBackend]);
+
+  // Listen for system theme changes
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = (e: MediaQueryListEvent) => {
+      setSystemTheme(e.matches ? "dark" : "light");
+    };
+    mediaQuery.addEventListener("change", handler);
+    return () => mediaQuery.removeEventListener("change", handler);
+  }, []);
+
+  // Resolve the actual theme to use
+  const resolvedTheme = theme === "system" ? systemTheme : theme;
+
+  // Apply theme to document (just toggle dark class)
+  useEffect(() => {
+    const root = document.documentElement;
+    if (resolvedTheme === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+  }, [resolvedTheme]);
+
+  // Save theme mode to backend
+  const saveThemeSettings = useCallback(async (newMode: ThemeMode) => {
+    try {
+      const settings = await getSettings(folder);
+      const themeSettings: ThemeSettings = {
+        mode: newMode,
+      };
+      await updateSettings(folder, {
+        ...settings,
+        theme: themeSettings,
+      });
+    } catch (error) {
+      console.error("Failed to save theme settings:", error);
+    }
+  }, [folder]);
+
+  const setTheme = useCallback(
+    (newTheme: ThemeMode) => {
+      setThemeState(newTheme);
+      saveThemeSettings(newTheme);
+    },
+    [saveThemeSettings]
+  );
+
+  const cycleTheme = useCallback(() => {
+    const order: ThemeMode[] = ["light", "dark", "system"];
+    const currentIndex = order.indexOf(theme);
+    const nextIndex = (currentIndex + 1) % order.length;
+    setTheme(order[nextIndex]);
+  }, [theme, setTheme]);
+
+  // Apply font CSS variables whenever font settings change
+  useEffect(() => {
+    applyFontCSSVariables(editorFontSettings);
+  }, [editorFontSettings]);
+
+  // Apply layout CSS variables whenever direction or width change
+  useEffect(() => {
+    applyLayoutCSSVariables(textDirection, editorWidth);
+  }, [textDirection, editorWidth]);
+
+  // Save font settings to backend
+  const saveFontSettings = useCallback(
+    async (newFontSettings: Required<EditorFontSettings>) => {
+      try {
+        const settings = await getSettings(folder);
+        await updateSettings(folder, {
+          ...settings,
+          editorFont: newFontSettings,
+        });
+      } catch (error) {
+        console.error("Failed to save font settings:", error);
+      }
+    },
+    [folder]
+  );
+
+  // Update a single font setting
+  const setEditorFontSetting = useCallback(
+    <K extends keyof EditorFontSettings>(
+      key: K,
+      value: EditorFontSettings[K]
+    ) => {
+      setEditorFontSettings((prev) => {
+        const updated = { ...prev, [key]: value };
+        saveFontSettings(updated);
+        return updated;
+      });
+    },
+    [saveFontSettings]
+  );
+
+  // Zoom font size by delta (clamped to 12–24)
+  const zoomFontSize = useCallback(
+    (delta: number) => {
+      setEditorFontSettings((prev) => {
+        const newSize = Math.min(Math.max(prev.baseFontSize + delta, 12), 24);
+        if (newSize === prev.baseFontSize) return prev;
+        const updated = { ...prev, baseFontSize: newSize };
+        saveFontSettings(updated);
+        return updated;
+      });
+    },
+    [saveFontSettings],
+  );
+
+  // Reset font settings to defaults (single atomic save to avoid race conditions)
+  const resetEditorFontSettings = useCallback(async () => {
+    setEditorFontSettings(defaultEditorFontSettings);
+    setTextDirectionState("ltr");
+    setEditorWidthState("normal");
+    try {
+      const settings = await getSettings(folder);
+      await updateSettings(folder, {
+        ...settings,
+        editorFont: defaultEditorFontSettings,
+        textDirection: "ltr",
+        editorWidth: "normal",
+      });
+    } catch (error) {
+      console.error("Failed to reset editor settings:", error);
+    }
+  }, [folder]);
+
+  // Save and set text direction
+  const setTextDirection = useCallback(async (dir: TextDirection) => {
+    setTextDirectionState(dir);
+    try {
+      const settings = await getSettings(folder);
+      await updateSettings(folder, { ...settings, textDirection: dir });
+    } catch (error) {
+      console.error("Failed to save text direction:", error);
+    }
+  }, [folder]);
+
+  // Save and set editor width
+  const setEditorWidth = useCallback(async (width: EditorWidth) => {
+    setEditorWidthState(width);
+    try {
+      const settings = await getSettings(folder);
+      await updateSettings(folder, { ...settings, editorWidth: width });
+    } catch (error) {
+      console.error("Failed to save editor width:", error);
+    }
+  }, [folder]);
+
+  // Save and set language
+  const setLanguage = useCallback(async (lang: LocaleSetting) => {
+    setLanguageState(lang);
+    try {
+      const settings = await getSettings(folder);
+      await updateSettings(folder, { ...settings, language: lang });
+    } catch (error) {
+      console.error("Failed to save language:", error);
+    }
+  }, [folder]);
+
+  // Don't render until initialized to prevent flash
+  if (!isInitialized) {
+    return null;
+  }
+
+  return (
+    <ThemeContext.Provider
+      value={{
+        theme,
+        resolvedTheme,
+        setTheme,
+        cycleTheme,
+        editorFontSettings,
+        setEditorFontSetting,
+        resetEditorFontSettings,
+        zoomFontSize,
+        reloadSettings,
+        textDirection,
+        setTextDirection,
+        editorWidth,
+        setEditorWidth,
+        language,
+        setLanguage,
+      }}
+    >
+      {children}
+    </ThemeContext.Provider>
+  );
+}

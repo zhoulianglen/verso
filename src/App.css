@@ -1,0 +1,1349 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* Use class-based dark mode instead of media query */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Theme color tokens - Light mode (default) */
+:root {
+  --color-bg: #ffffff;
+  --color-bg-secondary: #ffffff;
+  --color-bg-sidebar: #2E3235;
+  --color-bg-muted: rgba(0, 0, 0, 0.05);
+  --color-bg-emphasis: rgba(0, 0, 0, 0.09);
+  --color-text: #171717;
+  --color-text-muted: #737373;
+  --color-text-inverse: #fafafa;
+  --color-border: rgba(0, 0, 0, 0.1);
+  --color-border-solid: #d4d4d4; /* neutral-300 - for table borders */
+  --color-accent: #171717;
+  --color-selection: rgba(0, 0, 0, 0.12);
+
+  /* Editor font settings - simplified (overridden by ThemeContext) */
+  --editor-font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --editor-base-font-size: 17px;
+  --editor-bold-weight: 700;
+  --editor-line-height: 1.75;
+  --editor-paragraph-spacing: 1.1em;
+
+  /* Computed header sizes (set by ThemeContext based on base size) */
+  --editor-h1-size: 30px;
+  --editor-h2-size: 25px;
+  --editor-h3-size: 24px;
+  --editor-h4-size: 20px;
+  --editor-h5-size: 16px;
+  --editor-h6-size: 16px;
+}
+
+/* Sidebar color overrides - light mode dark sidebar */
+:root:not(.dark) .sidebar-panel {
+  color: #d4d4d4;
+  --color-text: #d4d4d4;
+  --color-text-muted: #858585;
+  --color-bg-muted: rgba(255, 255, 255, 0.08);
+  --color-bg-emphasis: rgba(255, 255, 255, 0.12);
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-solid: #505050;
+  --color-accent: #d4d4d4;
+}
+
+:root:not(.dark) .sidebar-panel input {
+  color: #d4d4d4;
+  background-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+:root:not(.dark) .sidebar-panel input::placeholder {
+  color: #666666;
+}
+
+/* Theme color tokens - Dark mode */
+.dark {
+  --color-bg: #000000;
+  --color-bg-secondary: #000000;
+  --color-bg-sidebar: #111111;
+  --color-bg-muted: rgba(255, 255, 255, 0.06);
+  --color-bg-emphasis: rgba(255, 255, 255, 0.1);
+  --color-text: #e5e5e5;
+  --color-text-muted: #737373;
+  --color-text-inverse: #0a0a0a;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-solid: #404040; /* neutral-700 - for table borders */
+  --color-accent: #e5e5e5;
+  --color-selection: rgba(255, 255, 255, 0.12);
+}
+
+/* Register theme colors with Tailwind */
+@theme {
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-serif:
+    ui-serif, Georgia, Cambria, "Times New Roman", Times, serif,
+    "Apple Color Emoji";
+  --font-mono:
+    ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, "Courier New",
+    monospace;
+
+  /* Custom font sizes */
+  --text-2xs: 0.75rem; /* 12px */
+  --text-2xs--line-height: 1rem;
+  --text-xs: 0.8125rem; /* 13px */
+  --text-xs--line-height: 1.25rem;
+
+  /* Background colors */
+  --color-bg: var(--color-bg);
+  --color-bg-secondary: var(--color-bg-secondary);
+  --color-bg-sidebar: var(--color-bg-sidebar);
+  --color-bg-muted: var(--color-bg-muted);
+  --color-bg-emphasis: var(--color-bg-emphasis);
+
+  /* Text colors */
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-inverse: var(--color-text-inverse);
+
+  /* Border colors */
+  --color-border: var(--color-border);
+
+  /* Accent colors */
+  --color-accent: var(--color-accent);
+}
+
+/* Base styles */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* macOS transparent title bar support */
+.titlebar-drag-region {
+  -webkit-app-region: drag;
+}
+
+.titlebar-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Text and image selection highlight */
+::selection {
+  background-color: var(--color-selection);
+}
+
+::-moz-selection {
+  background-color: var(--color-selection);
+}
+
+/* Hide scrollbar while allowing scroll */
+.scrollbar-none {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Custom thin scrollbar for sidebar */
+.scrollbar-thin {
+  overflow-y: auto !important;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px !important;
+  -webkit-appearance: none !important;
+  background: transparent !important;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  -webkit-appearance: none !important;
+  background: transparent !important;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  -webkit-appearance: none !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-radius: 3px !important;
+  min-height: 30px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+
+.scrollbar-thin::-webkit-scrollbar-button {
+  display: none !important;
+  height: 0 !important;
+  width: 0 !important;
+}
+
+.scrollbar-thin::-webkit-scrollbar-corner {
+  display: none !important;
+}
+
+/* Custom thin scrollbar for editor content */
+.scrollbar-editor::-webkit-scrollbar {
+  width: 6px !important;
+  -webkit-appearance: none !important;
+  background: transparent !important;
+}
+
+.scrollbar-editor::-webkit-scrollbar-track {
+  -webkit-appearance: none !important;
+  background: transparent !important;
+}
+
+.scrollbar-editor::-webkit-scrollbar-thumb {
+  -webkit-appearance: none !important;
+  background: rgba(0, 0, 0, 0.12) !important;
+  border-radius: 3px !important;
+  min-height: 30px;
+}
+
+.scrollbar-editor::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25) !important;
+}
+
+.scrollbar-editor::-webkit-scrollbar-thumb:active {
+  background: rgba(0, 0, 0, 0.35) !important;
+}
+
+.scrollbar-editor::-webkit-scrollbar-button {
+  display: none !important;
+  height: 0 !important;
+  width: 0 !important;
+}
+
+/* Dark mode editor scrollbar */
+.dark .scrollbar-editor::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+
+.dark .scrollbar-editor::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+.dark .scrollbar-editor::-webkit-scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Link tooltip in editor */
+.prose a {
+  position: relative;
+}
+
+.prose a::after {
+  content: "Ctrl+click to open";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--color-text-inverse);
+  background-color: var(--color-text);
+  border-radius: 0.25rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  margin-bottom: 0.25rem;
+  z-index: 50;
+}
+
+/* Mac-specific tooltip */
+.platform-mac .prose a::after {
+  content: "⌘+click to open";
+}
+
+.prose a:hover::after {
+  opacity: 1;
+}
+
+/* Smooth theme transitions */
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+/* Command palette animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.15s ease-out;
+}
+
+.animate-slide-down {
+  animation: slide-down 0.2s ease-out;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 2s linear infinite;
+}
+
+/* Staggered fade-in-up animation for welcome screen */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+/* CodeMirror source editor — fill container */
+.cm-editor {
+  height: 100%;
+}
+
+/* Source mode visual table widget */
+.cm-source-table-wrapper {
+  position: relative;
+  margin: 0.5em 0;
+  overflow: visible;
+}
+
+.cm-source-table-wrapper table.not-prose {
+  margin: 0;
+}
+
+.cm-source-table-wrapper th[contenteditable],
+.cm-source-table-wrapper td[contenteditable] {
+  cursor: text;
+  outline: none;
+}
+
+.cm-source-table-wrapper th[contenteditable]:focus,
+.cm-source-table-wrapper td[contenteditable]:focus {
+  box-shadow: inset 0 0 0 2px var(--color-selection);
+}
+
+/* Editor layout - direction and max-width from settings */
+.ProseMirror {
+  direction: var(--editor-direction, ltr);
+  max-width: var(--editor-max-width, 48rem) !important;
+  caret-color: #e25555;
+}
+
+/* Editor font customization - simplified */
+.prose {
+  font-family: var(--editor-font-family);
+  font-size: var(--editor-base-font-size);
+  font-weight: 400;
+  line-height: var(--editor-line-height);
+  letter-spacing: 0.01em;
+  color: var(--color-text);
+}
+
+/* Ensure prose text color follows theme in dark mode */
+.prose
+  :where(p, li, blockquote, code, pre, td, th):not(
+    :where([class~="not-prose"], [class~="not-prose"] *)
+  ) {
+  color: var(--color-text);
+}
+
+.prose
+  :where(h1, h2, h3, h4, h5, h6):not(
+    :where([class~="not-prose"], [class~="not-prose"] *)
+  ) {
+  color: var(--color-text);
+}
+
+/* Headings - all use the same font family with computed sizes */
+.prose h1 {
+  font-family: var(--editor-font-family);
+  font-size: var(--editor-h1-size);
+  font-weight: var(--editor-bold-weight);
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  margin-top: 1.5em;
+  margin-bottom: 0.6em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.prose h2 {
+  font-family: var(--editor-font-family);
+  font-size: var(--editor-h2-size);
+  font-weight: var(--editor-bold-weight);
+  line-height: 1.35;
+  letter-spacing: -0.005em;
+  margin-top: 1.4em;
+  margin-bottom: 0.5em;
+}
+
+.prose h3 {
+  font-family: var(--editor-font-family);
+  font-size: var(--editor-h3-size);
+  font-weight: var(--editor-bold-weight);
+  line-height: 1.4;
+  margin-top: 1.3em;
+  margin-bottom: 0.45em;
+}
+
+.prose h4 {
+  font-family: var(--editor-font-family);
+  font-size: var(--editor-h4-size);
+  font-weight: var(--editor-bold-weight);
+  line-height: 1.4;
+  margin-top: 1.2em;
+  margin-bottom: 0.4em;
+}
+
+.prose h5,
+.prose h6 {
+  font-family: var(--editor-font-family);
+  font-size: var(--editor-h5-size);
+  font-weight: var(--editor-bold-weight);
+  line-height: 1.4;
+  margin-top: 1em;
+  margin-bottom: 0.35em;
+}
+
+/* Bold text uses the same weight as headings */
+.prose strong,
+.prose b {
+  font-weight: var(--editor-bold-weight);
+  color: var(--color-text);
+}
+
+/* Inline code - Bear-style: normal color, soft pill background */
+.prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  color: var(--color-text);
+  background-color: var(--color-bg-emphasis);
+  padding: 0.15em 0.45em;
+  border-radius: 0.25rem;
+  font-size: 0.85em;
+  font-weight: 400;
+}
+
+/* Remove backticks from inline code */
+.prose
+  :where(code):not(
+    :where([class~="not-prose"], [class~="not-prose"] *)
+  )::before,
+.prose
+  :where(code):not(
+    :where([class~="not-prose"], [class~="not-prose"] *)
+  )::after {
+  content: "";
+}
+
+/* Code blocks (pre > code) - Bear-style: distinct background, generous padding */
+.prose :where(pre):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  background-color: var(--color-bg-emphasis);
+  color: var(--color-text);
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-size: 0.875em;
+  line-height: 1.6;
+}
+
+.prose
+  :where(pre code):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  background-color: transparent;
+  padding: 0;
+  font-size: inherit;
+  font-weight: 400;
+  color: inherit;
+}
+
+/* Syntax highlighting — One Light (light mode) */
+.prose pre code .hljs-comment,
+.prose pre code .hljs-quote {
+  color: #a0a1a7;
+  font-style: italic;
+}
+.prose pre code .hljs-doctag,
+.prose pre code .hljs-formula {
+  color: #a626a4;
+}
+.prose pre code .hljs-keyword,
+.prose pre code .hljs-selector-tag {
+  color: #a626a4;
+}
+.prose pre code .hljs-built_in,
+.prose pre code .hljs-name {
+  color: #e45649;
+}
+.prose pre code .hljs-string,
+.prose pre code .hljs-attr,
+.prose pre code .hljs-template-tag,
+.prose pre code .hljs-regexp {
+  color: #50a14f;
+}
+.prose pre code .hljs-number,
+.prose pre code .hljs-literal {
+  color: #986801;
+}
+.prose pre code .hljs-variable,
+.prose pre code .hljs-template-variable,
+.prose pre code .hljs-params {
+  color: #383a42;
+}
+.prose pre code .hljs-title,
+.prose pre code .hljs-title\.function_,
+.prose pre code .hljs-section {
+  color: #4078f2;
+}
+.prose pre code .hljs-type,
+.prose pre code .hljs-title\.class_ {
+  color: #c18401;
+}
+.prose pre code .hljs-tag {
+  color: #383a42;
+}
+.prose pre code .hljs-attribute {
+  color: #986801;
+}
+.prose pre code .hljs-symbol,
+.prose pre code .hljs-bullet,
+.prose pre code .hljs-link {
+  color: #4078f2;
+}
+.prose pre code .hljs-meta {
+  color: #4078f2;
+}
+.prose pre code .hljs-selector-id,
+.prose pre code .hljs-selector-class {
+  color: #4078f2;
+}
+.prose pre code .hljs-deletion {
+  color: #e45649;
+}
+.prose pre code .hljs-addition {
+  color: #50a14f;
+}
+.prose pre code .hljs-emphasis {
+  font-style: italic;
+}
+.prose pre code .hljs-strong {
+  font-weight: 700;
+}
+
+/* Syntax highlighting — One Dark (dark mode) */
+.dark .prose pre code .hljs-comment,
+.dark .prose pre code .hljs-quote {
+  color: #5c6370;
+  font-style: italic;
+}
+.dark .prose pre code .hljs-doctag,
+.dark .prose pre code .hljs-formula {
+  color: #c678dd;
+}
+.dark .prose pre code .hljs-keyword,
+.dark .prose pre code .hljs-selector-tag {
+  color: #c678dd;
+}
+.dark .prose pre code .hljs-built_in,
+.dark .prose pre code .hljs-name {
+  color: #e06c75;
+}
+.dark .prose pre code .hljs-string,
+.dark .prose pre code .hljs-attr,
+.dark .prose pre code .hljs-template-tag,
+.dark .prose pre code .hljs-regexp {
+  color: #98c379;
+}
+.dark .prose pre code .hljs-number,
+.dark .prose pre code .hljs-literal {
+  color: #d19a66;
+}
+.dark .prose pre code .hljs-variable,
+.dark .prose pre code .hljs-template-variable,
+.dark .prose pre code .hljs-params {
+  color: #abb2bf;
+}
+.dark .prose pre code .hljs-title,
+.dark .prose pre code .hljs-title\.function_,
+.dark .prose pre code .hljs-section {
+  color: #61afef;
+}
+.dark .prose pre code .hljs-type,
+.dark .prose pre code .hljs-title\.class_ {
+  color: #e5c07b;
+}
+.dark .prose pre code .hljs-tag {
+  color: #abb2bf;
+}
+.dark .prose pre code .hljs-attribute {
+  color: #d19a66;
+}
+.dark .prose pre code .hljs-symbol,
+.dark .prose pre code .hljs-bullet,
+.dark .prose pre code .hljs-link {
+  color: #61afef;
+}
+.dark .prose pre code .hljs-meta {
+  color: #61afef;
+}
+.dark .prose pre code .hljs-selector-id,
+.dark .prose pre code .hljs-selector-class {
+  color: #61afef;
+}
+.dark .prose pre code .hljs-deletion {
+  color: #e06c75;
+}
+.dark .prose pre code .hljs-addition {
+  color: #98c379;
+}
+.dark .prose pre code .hljs-emphasis {
+  font-style: italic;
+}
+.dark .prose pre code .hljs-strong {
+  font-weight: 700;
+}
+
+/* Frontmatter block (YAML metadata) — must follow generic pre rules */
+.prose
+  :where(pre.frontmatter):not(
+    :where([class~="not-prose"], [class~="not-prose"] *)
+  ) {
+  background-color: var(--color-bg-muted);
+  color: var(--color-text-muted);
+  border: 1px dashed var(--color-border);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+/* Frontmatter code inherits muted color, not red */
+.prose pre.frontmatter code {
+  color: var(--color-text-muted);
+}
+
+/* Links - Bear-style red accent */
+.prose :where(a):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  color: #E25D5D;
+  text-decoration: none;
+}
+.prose :where(a):not(:where([class~="not-prose"], [class~="not-prose"] *)):hover {
+  text-decoration: underline;
+}
+
+/* Highlight mark (==text==) - warm yellow */
+.prose :where(mark):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  background-color: rgba(255, 212, 0, 0.3);
+  color: var(--color-text);
+  padding: 0.1em 0.2em;
+  border-radius: 0.2rem;
+}
+
+/* Blockquotes - Bear-style subtle left border */
+.prose
+  :where(blockquote):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  color: var(--color-text-muted);
+  border-left: 3px solid #E25D5D;
+  border-inline-start: 3px solid #E25D5D;
+  padding-left: 1em;
+  font-style: italic;
+}
+
+/* Horizontal rules */
+.prose :where(hr):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  border-color: var(--color-border);
+  margin-top: 1.75em;
+  margin-bottom: 1.75em;
+}
+
+/* Prose spacing - fixed paragraph spacing */
+.prose p {
+  margin-top: 0;
+  margin-bottom: var(--editor-paragraph-spacing);
+}
+
+.prose ul,
+.prose ol {
+  margin-top: 0;
+  margin-bottom: var(--editor-paragraph-spacing);
+  padding-left: 1.25em;
+  padding-inline-start: 1.25em;
+}
+
+/* Remove extra margins from nested lists */
+.prose li > ul,
+.prose li > ol {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.prose li {
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-left: 0.25em;
+  padding-inline-start: 0.25em;
+}
+
+/* List markers - Bear-style red accent */
+.prose :where(ul > li)::marker {
+  color: #E25D5D;
+}
+
+.prose :where(ol > li)::marker {
+  color: #E25D5D;
+}
+
+.prose li > p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.prose > :first-child {
+  margin-top: 0;
+}
+
+.prose > :last-child {
+  margin-bottom: 0;
+}
+
+/* Task list checkbox styles */
+ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0 !important;
+  padding-inline-start: 0 !important;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+}
+
+ul[data-type="taskList"] li > label {
+  flex-shrink: 0;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  height: 1.6em; /* Match text line height */
+}
+
+ul[data-type="taskList"] li > label input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+ul[data-type="taskList"] li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+ul[data-type="taskList"] li > div > p {
+  margin: 0;
+}
+
+ul[data-type="taskList"] li[data-checked="true"] > div {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+/* Task list spacing - breathing room between items */
+ul[data-type="taskList"] > li {
+  padding-top: 0.125em;
+  padding-bottom: 0.125em;
+}
+
+/* Space around nested task lists */
+ul[data-type="taskList"] ul[data-type="taskList"] {
+  margin-top: 0.2em; /* Space between parent text and first child */
+  margin-bottom: 0em; /* Small space after last child */
+}
+
+/* Table styles */
+.prose table,
+table.not-prose {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--color-border-solid);
+  border-radius: 6px;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  font-size: var(--editor-base-font-size);
+  color: var(--color-text);
+  /* Hide scrollbar but keep horizontal scrolling */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.prose table::-webkit-scrollbar,
+table.not-prose::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.prose table th,
+.prose table td,
+table.not-prose th,
+table.not-prose td {
+  border: 0;
+  border-right: 1px solid var(--color-border-solid);
+  border-bottom: 1px solid var(--color-border-solid);
+  padding: 0.5em 0.75em;
+  text-align: left;
+  vertical-align: top;
+  min-width: 120px;
+}
+
+/* Avoid double lines with separate border model */
+.prose table th:last-child,
+.prose table td:last-child,
+table.not-prose th:last-child,
+table.not-prose td:last-child {
+  border-right: none;
+}
+
+.prose table tr:last-child th,
+.prose table tr:last-child td,
+table.not-prose tr:last-child th,
+table.not-prose tr:last-child td {
+  border-bottom: none;
+}
+
+.prose table th,
+table.not-prose th {
+  font-weight: var(--editor-bold-weight);
+  background-color: var(--color-bg-muted);
+}
+
+/* Remove all margins inside table cells - cell padding handles spacing */
+.prose table td > *,
+.prose table th > *,
+table.not-prose td > *,
+table.not-prose th > * {
+  margin: 0;
+}
+
+/* TipTap table selection styles */
+.selectedCell::after {
+  z-index: 2;
+  position: absolute;
+  content: "";
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--color-selection);
+  pointer-events: none;
+}
+
+/* stylelint-disable selector-class-pattern */
+
+/* Table wrapper - container with border (class name generated by TipTap) */
+.tableWrapper {
+  position: relative;
+  margin: 1em 0;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+  border: none;
+  border-radius: 0;
+}
+
+/* Table "+" button controls — add rows/columns on hover */
+.table-col-controls {
+  position: absolute;
+  top: -22px;
+  left: 0;
+  right: 0;
+  height: 20px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.table-row-controls {
+  position: absolute;
+  top: 0;
+  left: -22px;
+  bottom: 0;
+  width: 20px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.table-add-btn {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border-solid);
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 16px;
+  text-align: center;
+  cursor: pointer;
+  pointer-events: auto;
+  opacity: 0;
+  transition: opacity 0.15s, background-color 0.15s;
+  padding: 0;
+}
+
+.table-add-btn.visible {
+  opacity: 1;
+}
+
+.table-add-btn:hover {
+  background: var(--color-bg-muted);
+  color: var(--color-text);
+}
+
+.tableWrapper::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.tableWrapper table {
+  margin: 0;
+  width: max-content !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* stylelint-enable selector-class-pattern */
+
+.prose table td,
+.prose table th,
+table.not-prose td,
+table.not-prose th {
+  position: relative;
+}
+
+/* Radix UI tooltip animations */
+@keyframes tooltip-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes tooltip-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes tooltip-zoom-in {
+  from {
+    transform: scale(0.95);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes tooltip-zoom-out {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(0.95);
+  }
+}
+
+@keyframes tooltip-slide-in-from-top {
+  from {
+    transform: translateY(-2px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes tooltip-slide-in-from-top-4 {
+  from {
+    transform: translateY(-4px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes tooltip-slide-in-from-bottom {
+  from {
+    transform: translateY(2px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes tooltip-slide-in-from-left {
+  from {
+    transform: translateX(-2px);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes tooltip-slide-in-from-right {
+  from {
+    transform: translateX(2px);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-in {
+  animation-duration: 150ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: both;
+}
+
+.animate-out {
+  animation-duration: 100ms;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+.fade-in-0 {
+  animation-name: tooltip-fade-in;
+}
+
+.fade-out-0 {
+  animation-name: tooltip-fade-out;
+}
+
+.zoom-in-95 {
+  animation-name: tooltip-zoom-in;
+}
+
+.zoom-out-95 {
+  animation-name: tooltip-zoom-out;
+}
+
+.slide-in-from-top-2 {
+  animation-name: tooltip-slide-in-from-top;
+}
+
+.slide-in-from-top-4 {
+  animation-name: tooltip-slide-in-from-top-4;
+}
+
+.slide-in-from-bottom-2 {
+  animation-name: tooltip-slide-in-from-bottom;
+}
+
+.slide-in-from-left-2 {
+  animation-name: tooltip-slide-in-from-left;
+}
+
+.slide-in-from-right-2 {
+  animation-name: tooltip-slide-in-from-right;
+}
+
+/* Floating bubble toolbar */
+@keyframes bubble-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bubble-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-solid);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: bubble-fade-in 0.15s ease-out;
+}
+
+.dark .bubble-toolbar {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.bubble-toolbar button {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.bubble-toolbar button:hover {
+  background: var(--color-bg-muted);
+  color: var(--color-text);
+}
+
+.bubble-toolbar button.is-active {
+  background: var(--color-bg-emphasis);
+  color: var(--color-text);
+}
+
+.bubble-toolbar-separator {
+  width: 1px;
+  height: 18px;
+  background: var(--color-border);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+/* Print styles for clean PDF export */
+@media print {
+  /* Disable all transitions to prevent color flashing after print */
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  /* Force white background and black text for printing - only for visible content */
+  body,
+  #root,
+  .prose,
+  .prose *,
+  .ProseMirror,
+  .ProseMirror * {
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+
+  /* Remove all height/overflow constraints to allow multi-page printing */
+  html,
+  body,
+  #root,
+  #root > div,
+  #root > div > div,
+  .flex-1,
+  .flex-1 > div {
+    height: auto !important;
+    overflow: visible !important;
+    max-height: none !important;
+    border: none !important;
+    border-top: none !important;
+    border-bottom: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    outline: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide sidebar - target the first flex child that contains Sidebar */
+  #root > div > div:first-child {
+    display: none !important;
+  }
+
+  /* Hide all UI elements - only show editor content */
+  [data-tauri-drag-region],
+  button,
+  .dropdown,
+  .tooltip,
+  .toast,
+  .modal,
+  .dialog,
+  [role="dialog"],
+  [data-radix-portal],
+  nav,
+  header,
+  footer {
+    display: none !important;
+  }
+
+  /* Hide the toolbar div with drag region */
+  [data-tauri-drag-region] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: absolute !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+  }
+
+  /* Hide format bar by targeting its wrapper */
+  .flex-1 > div:has(> div[class*="border-b"]) {
+    display: none !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Make editor container expand for printing */
+  .flex-1 {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* Make editor full width for printing */
+  .ProseMirror {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* Add padding to prose content for proper margins */
+  .prose {
+    max-width: 100% !important;
+    padding: 0.75in 1in !important;
+    margin: 0 !important;
+  }
+
+  /* Ensure page breaks work well */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  p,
+  blockquote,
+  pre,
+  ul,
+  ol,
+  table {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Ensure links are underlined and show URL */
+  a {
+    text-decoration: underline !important;
+    color: black !important;
+  }
+
+  /* Hide link tooltips when printing */
+  a::after {
+    display: none !important;
+  }
+
+  /* Make code blocks readable */
+  code,
+  pre {
+    background: #f5f5f5 !important;
+    border: none !important;
+    color: black !important;
+  }
+
+  /* Table borders for printing - subtle styling with outer border */
+  table {
+    border: 1px solid #d0d0d0 !important;
+    border-collapse: collapse !important;
+  }
+
+  th,
+  td {
+    border: none !important;
+    border-bottom: 1px solid #e5e5e5 !important;
+  }
+
+  th {
+    background: #fafafa !important;
+    border-bottom: 1px solid #d0d0d0 !important;
+  }
+
+  /* Remove border from last row */
+  tr:last-child td {
+    border-bottom: none !important;
+  }
+
+  /* Remove task list checkboxes for printing (show as bullet list) */
+  ul[data-type="taskList"] input[type="checkbox"] {
+    display: none !important;
+  }
+
+  /* Ensure images fit on page */
+  img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}

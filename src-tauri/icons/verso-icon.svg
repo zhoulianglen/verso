@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <radialGradient id="bg" cx="0.5" cy="0.48" r="0.6">
+      <stop offset="0%" stop-color="#FAFAFA"/>
+      <stop offset="100%" stop-color="#EEEEEE"/>
+    </radialGradient>
+    <radialGradient id="drop" cx="0.43" cy="0.4" r="0.52">
+      <stop offset="0%" stop-color="#3a3430"/>
+      <stop offset="50%" stop-color="#1c1816"/>
+      <stop offset="100%" stop-color="#0c0a08"/>
+    </radialGradient>
+    <radialGradient id="hl" cx="0.38" cy="0.33" r="0.18">
+      <stop offset="0%" stop-color="#fff" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="iconShape">
+      <rect x="100" y="100" width="824" height="824" rx="185.4" ry="185.4"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#iconShape)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#bg)"/>
+
+    <!-- Shadow -->
+    <ellipse cx="512" cy="735" rx="95" ry="12" fill="#000" opacity="0.06"/>
+
+    <!-- Ink drop: smaller, rounder, more breathing room -->
+    <path d="
+      M 512 290
+      C 500 315, 475 355, 455 395
+      C 420 460, 385 510, 385 565
+      C 385 640, 440 710, 512 710
+      C 584 710, 639 640, 639 565
+      C 639 510, 604 460, 569 395
+      C 549 355, 524 315, 512 290
+      Z
+    " fill="url(#drop)"/>
+
+    <!-- Highlight -->
+    <ellipse cx="462" cy="500" rx="32" ry="52" fill="url(#hl)" transform="rotate(-12 462 500)"/>
+  </g>
+</svg>
