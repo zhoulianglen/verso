@@ -16,16 +16,17 @@
 
 ## Features
 
-- **WYSIWYG + Source mode** — Rich editor powered by TipTap, with a CodeMirror 6 source view (`Cmd+Shift+M`)
-- **Local-first** — Notes are plain `.md` files in a folder you choose. No cloud, no lock-in
+- **WYSIWYG & Source mode** — Rich visual editor powered by TipTap, with CodeMirror 6 source view and syntax highlighting (`Cmd+Shift+M`)
+- **Plain Markdown files** — Notes are standard `.md` files in a folder you choose. No proprietary formats, no lock-in
 - **Full-text search** — Powered by Tantivy (Rust), with instant prefix matching
-- **Focus mode** — Distraction-free writing (`Cmd+Shift+Enter`)
-- **Command palette** — Quick access to notes and actions (`Cmd+P`)
-- **Slash commands** — Type `/` to insert headings, lists, code blocks, tables, and more
-- **Dark / Light / System theme** — Automatic theme switching with customizable typography
+- **Tables & Rich content** — Insert tables, task lists, code blocks, images, and more via slash commands or the format bar
+- **Export anywhere** — Copy as Markdown, plain text, or HTML; print to PDF
+- **Live file watching** — External edits are picked up instantly; works alongside Git, Obsidian, or any other tool
+- **CJK-Latin spacing** — Automatic spacing between Chinese/Japanese/Korean and Latin characters
+- **Keyboard-first** — Command palette, slash commands, and comprehensive shortcuts
+- **Light & Dark themes** — Follows system preference automatically with customizable typography
 - **Git integration** — Optional commit & push from the sidebar
 - **AI editing** — Claude Code CLI integration for AI-assisted writing
-- **Auto-updater** — In-app update notifications
 - **i18n** — English and Simplified Chinese
 
 ## Screenshot
@@ -77,4 +78,4 @@ Full shortcut reference available in Settings → Shortcuts.
 
 ## License
 
-MIT
+GPL-3.0
