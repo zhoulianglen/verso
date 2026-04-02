@@ -425,6 +425,7 @@ export function Editor({
   const [isSaving, setIsSaving] = useState(false);
   // Force re-render when selection changes to update toolbar active states
   const [, setSelectionKey] = useState(0);
+  const selectionRafRef = useRef<number | null>(null);
   const [copyMenuOpen, setCopyMenuOpen] = useState(false);
   // Delay transition classes until after initial mount to avoid format bar height animation on note load
   const [hasTransitioned, setHasTransitioned] = useState(false);
@@ -599,6 +600,7 @@ export function Editor({
   }, [saveImmediately, getMarkdown]);
 
   // Schedule a debounced save (markdown computed only when timer fires)
+  // Use longer debounce for large documents to reduce serialization overhead
   const scheduleSave = useCallback(() => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -608,6 +610,10 @@ export function Editor({
     if (!savingNoteId) return;
 
     needsSaveRef.current = true;
+
+    // Adaptive debounce: 500ms for normal docs, 1500ms for large docs (>50KB)
+    const contentLength = currentNote?.content?.length ?? 0;
+    const debounceMs = contentLength > 50000 ? 1500 : 500;
 
     saveTimeoutRef.current = window.setTimeout(async () => {
       if (currentNoteIdRef.current !== savingNoteId || !needsSaveRef.current) {
@@ -620,8 +626,8 @@ export function Editor({
         const markdown = getMarkdown(editorRef.current);
         await saveImmediately(savingNoteId, markdown);
       }
-    }, 500);
-  }, [saveImmediately, getMarkdown, currentNote?.id]);
+    }, debounceMs);
+  }, [saveImmediately, getMarkdown, currentNote?.id, currentNote?.content?.length]);
 
   const editor = useEditor({
     extensions: [
@@ -673,7 +679,7 @@ export function Editor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-lg dark:prose-invert max-w-3xl mx-auto focus:outline-none min-h-full px-6 pt-8 pb-24",
+          "prose prose-lg dark:prose-invert mx-auto focus:outline-none min-h-full px-6 pt-8 pb-24",
       },
       // Trap Tab key inside the editor
       handleKeyDown: (_view, event) => {
@@ -774,8 +780,12 @@ export function Editor({
       scheduleSave();
     },
     onSelectionUpdate: () => {
-      // Trigger re-render to update toolbar active states
-      setSelectionKey((k) => k + 1);
+      // Batch selection updates via RAF to avoid excessive re-renders on large docs
+      if (selectionRafRef.current) return;
+      selectionRafRef.current = requestAnimationFrame(() => {
+        selectionRafRef.current = null;
+        setSelectionKey((k) => k + 1);
+      });
     },
     // Prevent flash of unstyled content during initial render
     immediatelyRender: false,
@@ -960,21 +970,32 @@ export function Editor({
     editor.commands.blur();
 
     // Parse markdown and set content
-    const manager = editor.storage.markdown?.manager;
-    if (manager) {
-      try {
-        const parsed = manager.parse(currentNote.content);
-        editor.commands.setContent(parsed);
-      } catch {
-        // Fallback to plain text if parsing fails
+    // For large docs, yield to the event loop before parsing to keep UI responsive
+    const setContentFromMarkdown = () => {
+      const manager = editor.storage.markdown?.manager;
+      if (manager) {
+        try {
+          const parsed = manager.parse(currentNote.content);
+          editor.commands.setContent(parsed);
+        } catch {
+          editor.commands.setContent(currentNote.content);
+        }
+      } else {
         editor.commands.setContent(currentNote.content);
       }
-    } else {
-      editor.commands.setContent(currentNote.content);
-    }
+      scrollContainerRef.current?.scrollTo(0, 0);
+    };
 
-    // Scroll to top after content is set (must be after setContent to work reliably)
-    scrollContainerRef.current?.scrollTo(0, 0);
+    const contentLength = currentNote.content?.length ?? 0;
+    if (contentLength > 50000) {
+      // Large file: defer parsing to next frame so the UI can show loading state
+      requestAnimationFrame(() => {
+        if (loadedNoteIdRef.current !== loadingNoteId) return;
+        setContentFromMarkdown();
+      });
+    } else {
+      setContentFromMarkdown();
+    }
 
     // Capture note ID to check in RAF callback - prevents race condition
     // if user switches notes quickly before RAF fires
@@ -1181,7 +1202,7 @@ export function Editor({
         console.error("Failed to add image:", error);
       }
     }
-  }, [editor]);
+  }, [editor, folder]);
 
   // Listen for slash command image insertion
   useEffect(() => {

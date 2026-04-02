@@ -1,6 +1,6 @@
 [package]
 name = "Verso"
-version = "0.7.0"
+version = "0.2.0"
 description = "An offline markdown-based notes app"
 authors = ["zhoulianglen"]
 license = "GPL-3.0-only"

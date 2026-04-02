@@ -2125,16 +2125,46 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
-    // Use .run() callback to handle macOS "Open With" file events
-    // RunEvent::Opened is macOS-only in Tauri v2
+    // Use .run() callback to handle macOS events and window lifecycle
     app.run(|_app_handle, _event| {
+        // macOS: handle "Open With" file events
         #[cfg(target_os = "macos")]
-        if let tauri::RunEvent::Opened { urls } = _event {
+        if let tauri::RunEvent::Opened { urls } = &_event {
             for url in urls {
                 if let Ok(path) = url.to_file_path() {
                     if is_markdown_extension(&path) && path.is_file() {
                         handle_open_file(_app_handle, &path);
                     }
+                }
+            }
+        }
+
+        // macOS: recreate main window when dock icon is clicked and no windows exist
+        #[cfg(target_os = "macos")]
+        if let tauri::RunEvent::Reopen { has_visible_windows, .. } = &_event {
+            if !has_visible_windows {
+                // Try to load last folder from config
+                let app_config = load_app_config(_app_handle);
+                let folder = app_config.last_folder.as_deref();
+
+                if let Some(folder) = folder {
+                    let _ = create_directory_window(_app_handle, folder, None);
+                } else {
+                    // No last folder — create a bare main window (will show WelcomePage)
+                    let builder = tauri::WebviewWindowBuilder::new(
+                        _app_handle,
+                        "main",
+                        tauri::WebviewUrl::App("index.html".into()),
+                    )
+                    .title("Verso")
+                    .inner_size(1080.0, 720.0)
+                    .min_inner_size(600.0, 400.0)
+                    .resizable(true)
+                    .decorations(true)
+                    .title_bar_style(tauri::TitleBarStyle::Overlay)
+                    .hidden_title(true);
+
+                    let _ = builder.build();
                 }
             }
         }
