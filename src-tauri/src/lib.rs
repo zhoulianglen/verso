@@ -1924,26 +1924,29 @@ fn create_directory_window(app: &AppHandle, folder: &str, select_file: Option<&s
         return Ok(());
     }
 
-    // If the main window exists, navigate it to the folder instead of creating a new window
-    if let Some(main_window) = app.get_webview_window("main") {
-        // Emit open-folder event so the frontend can navigate
-        #[derive(Clone, Serialize)]
-        struct OpenFolderEvent {
-            folder: String,
-            select: Option<String>,
-        }
-        let _ = main_window.emit("open-folder", OpenFolderEvent {
+    // Reuse any existing window (main or other folder window) — single-window app
+    #[derive(Clone, Serialize)]
+    struct OpenFolderEvent {
+        folder: String,
+        select: Option<String>,
+    }
+
+    // First try "main", then any existing window
+    let existing_window = app.get_webview_window("main")
+        .or_else(|| app.webview_windows().into_values().next());
+
+    if let Some(win) = existing_window {
+        let _ = win.emit("open-folder", OpenFolderEvent {
             folder: folder.to_string(),
             select: select_file.map(|s| s.to_string()),
         });
 
-        // Extract folder name for window title
         let folder_name = PathBuf::from(folder)
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| "Notes".to_string());
-        let _ = main_window.set_title(&format!("{} — Verso", folder_name));
-        let _ = main_window.set_focus();
+        let _ = win.set_title(&format!("{} — Verso", folder_name));
+        let _ = win.set_focus();
         return Ok(());
     }
 

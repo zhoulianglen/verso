@@ -134,6 +134,8 @@ import {
   MarkdownOffIcon,
   SettingsIcon,
   HighlightIcon,
+  UploadIcon,
+  ExternalLinkIcon,
 } from "../icons";
 
 function formatDateTime(timestamp: number): string {
@@ -232,13 +234,15 @@ interface FormatBarProps {
   editor: TiptapEditor | null;
   onAddLink: () => void;
   onAddImage: () => void;
+  onAddImageUrl: () => void;
   t: TranslateFn;
 }
 
 // FormatBar must re-render with parent to reflect editor.isActive() state changes
 // (editor instance is mutable, so memo would cause stale active states)
-function FormatBar({ editor, onAddLink, onAddImage, t }: FormatBarProps) {
+function FormatBar({ editor, onAddLink, onAddImage, onAddImageUrl, t }: FormatBarProps) {
   const [tableMenuOpen, setTableMenuOpen] = useState(false);
+  const [imageMenuOpen, setImageMenuOpen] = useState(false);
 
   if (!editor) return null;
 
@@ -358,9 +362,37 @@ function FormatBar({ editor, onAddLink, onAddImage, t }: FormatBarProps) {
       >
         <LinkIcon className="w-4.5 h-4.5 stroke-[1.5]" />
       </ToolbarButton>
-      <ToolbarButton onClick={onAddImage} isActive={false} title={t("editor.addImage")}>
-        <ImageIcon className="w-4.5 h-4.5 stroke-[1.5]" />
-      </ToolbarButton>
+      <DropdownMenu.Root open={imageMenuOpen} onOpenChange={setImageMenuOpen}>
+        <Tooltip content={t("editor.addImage")}>
+          <DropdownMenu.Trigger asChild>
+            <ToolbarButton isActive={false}>
+              <ImageIcon className="w-4.5 h-4.5 stroke-[1.5]" />
+            </ToolbarButton>
+          </DropdownMenu.Trigger>
+        </Tooltip>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            className="min-w-[160px] bg-bg border border-border rounded-lg shadow-lg py-1 z-50 animate-fade-in"
+            sideOffset={4}
+            align="start"
+          >
+            <DropdownMenu.Item
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-text cursor-pointer hover:bg-bg-muted outline-none"
+              onSelect={() => { setImageMenuOpen(false); onAddImage(); }}
+            >
+              <UploadIcon className="w-4 h-4 stroke-[1.5]" />
+              {t("editor.addLocalImage")}
+            </DropdownMenu.Item>
+            <DropdownMenu.Item
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-text cursor-pointer hover:bg-bg-muted outline-none"
+              onSelect={() => { setImageMenuOpen(false); onAddImageUrl(); }}
+            >
+              <ExternalLinkIcon className="w-4 h-4 stroke-[1.5]" />
+              {t("editor.addImageUrl")}
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
       <DropdownMenu.Root open={tableMenuOpen} onOpenChange={setTableMenuOpen}>
         <Tooltip content={t("editor.insertTable")}>
           <DropdownMenu.Trigger asChild>
@@ -458,6 +490,56 @@ export function Editor({
   // Keep ref in sync with current note ID
   currentNoteIdRef.current = currentNote?.id ?? null;
 
+  // Convert Tauri asset URLs back to real file paths for portable markdown
+  // asset://localhost/%2FUsers%2FLen%2F...png → /Users/Len/...png (absolute)
+  // asset://localhost/%2FUsers%2FLen%2Fnotes%2Fassets%2Fimg.png → ./assets/img.png (relative if inside notes folder)
+  const assetUrlToRealPath = useCallback(
+    (markdown: string) => {
+      return markdown.replace(
+        /(?:https?:\/\/asset\.localhost|asset:\/\/localhost)\/[^\s)]+/g,
+        (url) => {
+          try {
+            const encoded = url.replace(/^(?:https?:\/\/asset\.localhost|asset:\/\/localhost)\//, "");
+            const decoded = decodeURIComponent(encoded);
+            // If inside notes folder, use relative path
+            if (folder && (decoded.startsWith(folder + "/") || decoded.startsWith(folder + "\\"))) {
+              return "./" + decoded.slice(folder.length + 1);
+            }
+            // Otherwise keep absolute path
+            return decoded;
+          } catch { /* ignore decode errors */ }
+          return url;
+        },
+      );
+    },
+    [folder],
+  );
+
+  // Convert local file paths in markdown images to Tauri asset URLs for rendering
+  // ![](./assets/img.png) → asset URL
+  // ![](/Users/Len/Photos/img.png) → asset URL
+  // ![](https://...) → keep as-is (online images)
+  const localPathToAssetUrl = useCallback(
+    (markdown: string) => {
+      return markdown.replace(
+        /!\[([^\]]*)\]\(([^)]+)\)/g,
+        (match, alt, src) => {
+          const trimmed = src.trim();
+          // Skip URLs (http/https/asset/data)
+          if (/^(https?:|asset:|data:)/i.test(trimmed)) return match;
+          // Resolve relative paths against notes folder
+          let absolutePath = trimmed;
+          if (trimmed.startsWith("./") || trimmed.startsWith("../") || !trimmed.startsWith("/")) {
+            absolutePath = folder ? `${folder}/${trimmed.replace(/^\.\//, "")}` : trimmed;
+          }
+          const assetUrl = convertFileSrc(absolutePath);
+          return `![${alt}](${assetUrl})`;
+        },
+      );
+    },
+    [folder],
+  );
+
   // Get markdown from editor
   const getMarkdown = useCallback(
     (editorInstance: ReturnType<typeof useEditor>) => {
@@ -467,12 +549,14 @@ export function Editor({
         let markdown = manager.serialize(editorInstance.getJSON());
         // Clean up nbsp entities that TipTap inserts (especially in table cells)
         markdown = markdown.replace(/&nbsp;|&#160;/g, " ");
+        // Convert Tauri asset URLs to relative paths for portability
+        markdown = assetUrlToRealPath(markdown);
         return markdown;
       }
       // Fallback to plain text
       return editorInstance.getText();
     },
-    [],
+    [assetUrlToRealPath],
   );
 
   // Find all matches for search query (case-insensitive)
@@ -938,16 +1022,17 @@ export function Editor({
         lastReloadVersionRef.current = reloadVersion;
         loadedModifiedRef.current = currentNote.modified;
         isLoadingRef.current = true;
+        const content = localPathToAssetUrl(currentNote.content);
         const manager = editor.storage.markdown?.manager;
         if (manager) {
           try {
-            const parsed = manager.parse(currentNote.content);
+            const parsed = manager.parse(content);
             editor.commands.setContent(parsed);
           } catch {
-            editor.commands.setContent(currentNote.content);
+            editor.commands.setContent(content);
           }
         } else {
-          editor.commands.setContent(currentNote.content);
+          editor.commands.setContent(content);
         }
         isLoadingRef.current = false;
         return;
@@ -972,16 +1057,18 @@ export function Editor({
     // Parse markdown and set content
     // For large docs, yield to the event loop before parsing to keep UI responsive
     const setContentFromMarkdown = () => {
+      // Convert relative image paths to asset URLs before parsing
+      const content = localPathToAssetUrl(currentNote.content);
       const manager = editor.storage.markdown?.manager;
       if (manager) {
         try {
-          const parsed = manager.parse(currentNote.content);
+          const parsed = manager.parse(content);
           editor.commands.setContent(parsed);
         } catch {
-          editor.commands.setContent(currentNote.content);
+          editor.commands.setContent(content);
         }
       } else {
-        editor.commands.setContent(currentNote.content);
+        editor.commands.setContent(content);
       }
       scrollContainerRef.current?.scrollTo(0, 0);
     };
@@ -1170,7 +1257,7 @@ export function Editor({
     });
   }, [editor]);
 
-  // Image handler
+  // Image handler — reference original file directly, no copying
   const handleAddImage = useCallback(async () => {
     if (!editor) return;
     const selected = await openDialog({
@@ -1183,26 +1270,27 @@ export function Editor({
       ],
     });
     if (selected) {
-      try {
-        // Copy image to assets folder and get relative path (assets/filename.ext)
-        const relativePath = await invoke<string>("copy_image_to_assets", {
-          folder,
-          sourcePath: selected as string,
-        });
-
-        // Construct absolute path using Tauri's join
-        const absolutePath = await join(folder, relativePath);
-
-        // Convert to Tauri asset URL
-        const assetUrl = convertFileSrc(absolutePath);
-
-        // Insert image with asset URL
-        editor.chain().focus().setImage({ src: assetUrl }).run();
-      } catch (error) {
-        console.error("Failed to add image:", error);
-      }
+      const filePath = selected as string;
+      const assetUrl = convertFileSrc(filePath);
+      editor.chain().focus().setImage({ src: assetUrl }).run();
     }
-  }, [editor, folder]);
+  }, [editor]);
+
+  // Image URL input state
+  const [imageUrlInput, setImageUrlInput] = useState(false);
+
+  // Image URL handler — show inline input
+  const handleAddImageUrl = useCallback(() => {
+    if (!editor) return;
+    setImageUrlInput(true);
+  }, [editor]);
+
+  // Confirm image URL insertion
+  const handleConfirmImageUrl = useCallback((url: string) => {
+    if (!editor || !url.trim()) return;
+    editor.chain().focus().setImage({ src: url.trim() }).run();
+    setImageUrlInput(false);
+  }, [editor]);
 
   // Listen for slash command image insertion
   useEffect(() => {
@@ -1361,24 +1449,25 @@ export function Editor({
         setSourceContent(md);
         setSourceMode(true);
       } else {
-        // Exiting source mode: parse markdown back to TipTap JSON, then set content
+        // Exiting source mode: convert local paths to asset URLs, then parse back to TipTap
+        const content = localPathToAssetUrl(sourceContent);
         const manager = editor.storage.markdown?.manager;
         if (manager) {
           try {
-            const parsed = manager.parse(sourceContent);
+            const parsed = manager.parse(content);
             editor.commands.setContent(parsed);
           } catch {
-            editor.commands.setContent(sourceContent);
+            editor.commands.setContent(content);
           }
         } else {
-          editor.commands.setContent(sourceContent);
+          editor.commands.setContent(content);
         }
         setSourceMode(false);
       }
     } catch (err) {
       console.error("[source-mode] toggleSourceMode error:", err);
     }
-  }, [editor, sourceMode, sourceContent, getMarkdown]);
+  }, [editor, sourceMode, sourceContent, getMarkdown, localPathToAssetUrl]);
 
   // Listen for toggle-source-mode custom event (from App.tsx shortcut / command palette)
   useEffect(() => {
@@ -1668,9 +1757,38 @@ export function Editor({
           editor={editor}
           onAddLink={handleAddLink}
           onAddImage={handleAddImage}
+          onAddImageUrl={handleAddImageUrl}
           t={t}
         />
       </div>
+
+      {/* Image URL popup */}
+      {imageUrlInput && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => { setImageUrlInput(false); editor?.commands.focus(); }}
+          />
+          <div className="fixed left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 z-50 w-[420px] bg-bg border border-border rounded-xl shadow-xl p-4 animate-fade-in">
+            <p className="text-sm font-medium text-text mb-2.5">{t("editor.addImageUrl")}</p>
+            <input
+              autoFocus
+              type="url"
+              placeholder="https://example.com/image.png"
+              className="w-full px-3 py-2 text-sm bg-bg-muted rounded-lg border border-border outline-none focus:border-accent text-text placeholder:text-text-muted/50"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleConfirmImageUrl((e.target as HTMLInputElement).value);
+                } else if (e.key === "Escape") {
+                  setImageUrlInput(false);
+                  editor?.commands.focus();
+                }
+              }}
+            />
+            <p className="text-xs text-text-muted mt-2">{t("editor.imageUrlPlaceholder")}</p>
+          </div>
+        </>
+      )}
 
       {/* Editor content area */}
       <div

@@ -27,11 +27,11 @@ const fontFamilyMap: Record<FontFamily, string> = {
     "ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Monaco, 'Courier New', monospace",
 };
 
-// Editor width CSS values
+// Editor width CSS values — percentage-based for responsive sizing
 const editorWidthMap: Record<EditorWidth, string> = {
-  narrow: "36rem",
-  normal: "48rem",
-  wide: "64rem",
+  narrow: "min(36rem, 90%)",
+  normal: "min(65rem, 90%)",
+  wide: "min(85rem, 95%)",
   full: "100%",
 };
 
