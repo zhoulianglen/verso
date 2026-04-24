@@ -4,12 +4,14 @@ version = 4
 
 [[package]]
 name = "Verso"
-version = "0.7.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
  "chrono",
  "notify",
+ "objc2",
+ "objc2-app-kit",
  "open",
  "regex",
  "serde",

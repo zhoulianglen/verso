@@ -721,9 +721,8 @@ fn initialize_folder(app: AppHandle, folder: String, state: State<AppState>) -> 
         std::fs::create_dir_all(&path_buf).map_err(|e| e.to_string())?;
     }
 
-    // Create assets folder
-    let assets = path_buf.join("assets");
-    std::fs::create_dir_all(&assets).map_err(|e| e.to_string())?;
+    // Note: the `assets/` subdirectory is created lazily by save_clipboard_image
+    // and copy_image_to_assets when the user actually inserts an image.
 
     // Check if already initialized
     {
@@ -1890,6 +1889,57 @@ fn is_markdown_extension(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+/// On macOS, enable `setMovableByWindowBackground:` so the user can drag the
+/// window from any non-interactive area (matching Apple Notes / Obsidian /
+/// Things etc.). Without this, only the narrow `data-tauri-drag-region`
+/// strips at the very top of the sidebar/editor are draggable, which makes
+/// the window feel "stuck" — especially in the editor view where almost the
+/// entire viewport is filled with the toolbar and document content.
+#[cfg(target_os = "macos")]
+fn enable_window_background_drag(window: &tauri::WebviewWindow) {
+    use objc2::msg_send;
+    use objc2::runtime::AnyObject;
+
+    let ns_window_ptr = match window.ns_window() {
+        Ok(ptr) if !ptr.is_null() => ptr,
+        _ => return,
+    };
+    let ns_window: *mut AnyObject = ns_window_ptr.cast();
+    unsafe {
+        let _: () = msg_send![ns_window, setMovableByWindowBackground: true];
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn enable_window_background_drag(_window: &tauri::WebviewWindow) {}
+
+/// Build the default "main" window with the app's standard chrome.
+/// Used both at startup (when no file/folder is being opened) and when
+/// macOS recreates the window after the user reopens via the dock.
+fn build_main_window(app: &AppHandle) -> Result<tauri::WebviewWindow, tauri::Error> {
+    let builder = WebviewWindowBuilder::new(
+        app,
+        "main",
+        WebviewUrl::App("index.html".into()),
+    )
+    .title("Verso")
+    .inner_size(1080.0, 720.0)
+    .min_inner_size(600.0, 400.0)
+    .resizable(true)
+    .decorations(true)
+    .zoom_hotkeys_enabled(false);
+
+    #[cfg(target_os = "macos")]
+    let builder = builder
+        .title_bar_style(tauri::TitleBarStyle::Overlay)
+        .hidden_title(true)
+        .traffic_light_position(tauri::LogicalPosition::new(16.0, 24.0));
+
+    let window = builder.build()?;
+    enable_window_background_drag(&window);
+    Ok(window)
+}
+
 /// Generate a stable window label from a folder path.
 fn window_label_for_folder(folder: &str) -> String {
     use std::collections::hash_map::DefaultHasher;
@@ -1963,16 +2013,19 @@ fn create_directory_window(app: &AppHandle, folder: &str, select_file: Option<&s
         .inner_size(1080.0, 720.0)
         .min_inner_size(600.0, 400.0)
         .resizable(true)
-        .decorations(true);
+        .decorations(true)
+        .zoom_hotkeys_enabled(false);
 
     #[cfg(target_os = "macos")]
     let builder = builder
         .title_bar_style(tauri::TitleBarStyle::Overlay)
-        .hidden_title(true);
+        .hidden_title(true)
+        .traffic_light_position(tauri::LogicalPosition::new(16.0, 24.0));
 
     let window = builder
         .build()
         .map_err(|e| format!("Failed to create directory window: {}", e))?;
+    enable_window_background_drag(&window);
 
     // Focus the window (short delay to handle cold-start race)
     let win = window.clone();
@@ -2087,6 +2140,15 @@ pub fn run() {
                 handle_cli_args(app.handle(), &args, &cwd);
             }
 
+            // If no window has been created yet (no Apple Event opened a file before
+            // setup ran, no CLI file args), create the default "main" window. We do
+            // this programmatically instead of relying on tauri.conf.json so cold
+            // launches via a file association don't end up with both a stale "main"
+            // window and a folder window.
+            if app.webview_windows().is_empty() {
+                build_main_window(app.handle())?;
+            }
+
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -2154,20 +2216,7 @@ pub fn run() {
                     let _ = create_directory_window(_app_handle, folder, None);
                 } else {
                     // No last folder — create a bare main window (will show WelcomePage)
-                    let builder = tauri::WebviewWindowBuilder::new(
-                        _app_handle,
-                        "main",
-                        tauri::WebviewUrl::App("index.html".into()),
-                    )
-                    .title("Verso")
-                    .inner_size(1080.0, 720.0)
-                    .min_inner_size(600.0, 400.0)
-                    .resizable(true)
-                    .decorations(true)
-                    .title_bar_style(tauri::TitleBarStyle::Overlay)
-                    .hidden_title(true);
-
-                    let _ = builder.build();
+                    let _ = build_main_window(_app_handle);
                 }
             }
         }

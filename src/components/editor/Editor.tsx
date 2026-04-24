@@ -247,7 +247,10 @@ function FormatBar({ editor, onAddLink, onAddImage, onAddImageUrl, t }: FormatBa
   if (!editor) return null;
 
   return (
-    <div className="flex items-center gap-1 px-3 pb-2 border-b border-border overflow-x-auto scrollbar-none">
+    <div
+      className="flex items-center gap-1 px-3 pb-2 border-b border-border overflow-x-auto scrollbar-none"
+      data-tauri-drag-region
+    >
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleBold().run()}
         isActive={editor.isActive("bold")}
