@@ -1889,30 +1889,6 @@ fn is_markdown_extension(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
-/// On macOS, enable `setMovableByWindowBackground:` so the user can drag the
-/// window from any non-interactive area (matching Apple Notes / Obsidian /
-/// Things etc.). Without this, only the narrow `data-tauri-drag-region`
-/// strips at the very top of the sidebar/editor are draggable, which makes
-/// the window feel "stuck" — especially in the editor view where almost the
-/// entire viewport is filled with the toolbar and document content.
-#[cfg(target_os = "macos")]
-fn enable_window_background_drag(window: &tauri::WebviewWindow) {
-    use objc2::msg_send;
-    use objc2::runtime::AnyObject;
-
-    let ns_window_ptr = match window.ns_window() {
-        Ok(ptr) if !ptr.is_null() => ptr,
-        _ => return,
-    };
-    let ns_window: *mut AnyObject = ns_window_ptr.cast();
-    unsafe {
-        let _: () = msg_send![ns_window, setMovableByWindowBackground: true];
-    }
-}
-
-#[cfg(not(target_os = "macos"))]
-fn enable_window_background_drag(_window: &tauri::WebviewWindow) {}
-
 /// Build the default "main" window with the app's standard chrome.
 /// Used both at startup (when no file/folder is being opened) and when
 /// macOS recreates the window after the user reopens via the dock.
@@ -1936,7 +1912,6 @@ fn build_main_window(app: &AppHandle) -> Result<tauri::WebviewWindow, tauri::Err
         .traffic_light_position(tauri::LogicalPosition::new(16.0, 24.0));
 
     let window = builder.build()?;
-    enable_window_background_drag(&window);
     Ok(window)
 }
 
@@ -2025,7 +2000,6 @@ fn create_directory_window(app: &AppHandle, folder: &str, select_file: Option<&s
     let window = builder
         .build()
         .map_err(|e| format!("Failed to create directory window: {}", e))?;
-    enable_window_background_drag(&window);
 
     // Focus the window (short delay to handle cold-start race)
     let win = window.clone();

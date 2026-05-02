@@ -1,6 +1,6 @@
 [package]
 name = "Verso"
-version = "0.2.1"
+version = "0.2.2"
 description = "An offline markdown-based notes app"
 authors = ["zhoulianglen"]
 license = "GPL-3.0-only"
@@ -36,6 +36,3 @@ tauri-plugin-single-instance = "2"
 tauri-plugin-os = "2"
 chrono = "0.4"
 
-[target.'cfg(target_os = "macos")'.dependencies]
-objc2 = "0.6"
-objc2-app-kit = { version = "0.3", features = ["NSWindow"] }
